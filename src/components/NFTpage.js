@@ -26,8 +26,11 @@ export default function NFTPage() {
         let meta = await axios.get(tokenURI);
         meta = meta.data;
 
+        // Use ethers to format the price from the contract's BigNumber to string
+        const price = ethers.utils.formatUnits(listedToken.price.toString(), 'ether');
+
         const item = {
-            price: meta.price,
+            price: price, // Now using price from contract instead of metadata
             tokenId: tokenId,
             seller: listedToken.seller,
             owner: listedToken.owner,
