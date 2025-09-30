@@ -2,7 +2,8 @@ import Navbar from "./Navbar";
 import { useState, useEffect } from "react";
 import { uploadFileToIPFS, uploadJSONToIPFS } from "../thirdwebStorage";
 import Marketplace from '../Marketplace.json';
-import { useLocation } from "react-router";
+// removed unused useLocation import
+import { checkImageQuality } from "../utils/imageQualityChecker";
 
 export default function SellItem() {
     const [formParams, updateFormParams] = useState({ name: '', description: '', price: '' });
@@ -10,11 +11,13 @@ export default function SellItem() {
     const [previewURL, setPreviewURL] = useState(null);
     const ethers = require("ethers");
     const [message, updateMessage] = useState('');
-    const location = useLocation();
+    // removed unused location variable
     const [isWalletConnected, setIsWalletConnected] = useState(false);
     const [isLoading, setIsLoading] = useState(true);
     const [isUploading, setIsUploading] = useState(false);
     const [isListing, setIsListing] = useState(false);
+    const [qualityCheck, setQualityCheck] = useState(null);
+    const [isCheckingQuality, setIsCheckingQuality] = useState(false);
 
     // Check if wallet is connected
     async function checkWalletConnection() {
@@ -80,6 +83,17 @@ export default function SellItem() {
                 console.log("Uploaded image to Thirdweb: ", response.thirdwebURL);
                 setFileURL(response.thirdwebURL);
                 updateMessage("");
+
+                // Run image quality analysis on the preview
+                try {
+                    setIsCheckingQuality(true);
+                    const qc = await checkImageQuality(localPreview);
+                    setQualityCheck(qc);
+                } catch (err) {
+                    console.error("Quality check failed:", err);
+                } finally {
+                    setIsCheckingQuality(false);
+                }
             }
         } catch (e) {
             console.log("Error during file upload", e);
@@ -96,7 +110,7 @@ export default function SellItem() {
             updateMessage("Please fill all the fields!");
             return -1;
         }
-
+        
         const itemJSON = { name, description, price, image: fileURL };
 
         try {
@@ -162,31 +176,31 @@ export default function SellItem() {
                 <div className="flex flex-col items-center justify-center">
                     <h1 className="text-3xl font-bold text-white mb-8">List an Item for Sale</h1>
                     
-                    {isLoading ? (
+                {isLoading ? (
                         <div className="flex items-center justify-center h-64">
                             <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-blue-500"></div>
                         </div>
-                    ) : !isWalletConnected ? (
+                ) : !isWalletConnected ? (
                         <div className="bg-gray-800 bg-opacity-50 backdrop-filter backdrop-blur-sm rounded-xl py-8 px-6 max-w-md shadow-lg border border-gray-700 text-center">
                             <h3 className="font-bold text-2xl text-blue-400 mb-4">
                                 Connect Your Wallet
-                            </h3>
+                        </h3>
                             <p className="mb-6 text-gray-300">You need to connect your wallet to list items for sale.</p>
-                            <button 
-                                onClick={async () => {
-                                    try {
-                                        await window.ethereum.request({ method: 'eth_requestAccounts' });
-                                        checkWalletConnection();
-                                    } catch (err) {
-                                        console.error("Failed to connect wallet:", err);
-                                    }
-                                }}
+                        <button 
+                            onClick={async () => {
+                                try {
+                                    await window.ethereum.request({ method: 'eth_requestAccounts' });
+                                    checkWalletConnection();
+                                } catch (err) {
+                                    console.error("Failed to connect wallet:", err);
+                                }
+                            }}
                                 className="bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 px-6 rounded-lg transition-all duration-200 transform hover:scale-105"
-                            >
-                                Connect Wallet
-                            </button>
-                        </div>
-                    ) : (
+                        >
+                            Connect Wallet
+                        </button>
+                    </div>
+                ) : (
                         <div className="w-full max-w-2xl">
                             <div className="bg-gray-800 bg-opacity-40 backdrop-filter backdrop-blur-sm rounded-xl shadow-lg border border-gray-700 overflow-hidden">
                                 <div className="p-8">
@@ -216,22 +230,57 @@ export default function SellItem() {
                                                     </span>
                                                     <input type="file" className="hidden" onChange={OnChangeFile} disabled={isUploading} />
                                                 </label>
-                                            </div>
-                                        </div>
-                                        
+                                            {/* Image quality analysis */}
+                                            {isCheckingQuality && (
+                                                <div className="mt-4 p-3 bg-gray-800 rounded-lg border border-gray-700 text-sm text-gray-300">
+                                                    <div className="flex items-center">
+                                                        <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-blue-500 mr-2"></div>
+                                                        Analyzing image quality...
+                                                    </div>
+                                                </div>
+                                            )}
+                                            {qualityCheck && !isCheckingQuality && !qualityCheck.error && (
+                                                <div className="mt-4 p-4 bg-gray-800 rounded-lg border border-gray-700">
+                                                    <h3 className="text-lg font-semibold text-blue-400 mb-2">Image Quality Analysis</h3>
+                                                    <div className="flex items-center mb-2">
+                                                        <span className="text-sm text-gray-300 mr-2">Quality Score:</span>
+                                                        <div className="flex-1 bg-gray-700 rounded-full h-2">
+                                                            <div 
+                                                                className={`h-2 rounded-full ${
+                                                                    qualityCheck.qualityScore >= 70 ? 'bg-green-500' : 
+                                                                    qualityCheck.qualityScore >= 50 ? 'bg-yellow-500' : 'bg-red-500'
+                                                                }`}
+                                                                style={{ width: `${qualityCheck.qualityScore}%` }}
+                                                            ></div>
+                                                        </div>
+                                                        <span className="text-sm text-white ml-2">{qualityCheck.qualityScore}/100</span>
+                                                    </div>
+                                                    <div className="text-sm text-gray-300 mb-2">
+                                                        Resolution: {qualityCheck.imageInfo?.width}x{qualityCheck.imageInfo?.height}
+                        </div>
+                                                    <ul className="list-disc list-inside text-sm text-gray-300 space-y-1">
+                                                        {qualityCheck.suggestions?.map((s, idx) => (
+                                                            <li key={idx}>{s}</li>
+                                                        ))}
+                                                    </ul>
+                                                </div>
+                                            )}
+                        </div>
+                        </div>
+                        
                                         {/* Right side - Form */}
                                         <div>
                                             <form>
-                                                <div className="mb-4">
+                        <div className="mb-4">
                                                     <label className="block text-blue-400 text-sm font-medium mb-2">Item Name</label>
-                                                    <input 
+                            <input 
                                                         className="bg-gray-700 text-white shadow border border-gray-600 rounded-lg w-full py-2 px-3 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200" 
-                                                        type="text" 
+                                type="text" 
                                                         placeholder="Enter item name" 
                                                         value={formParams.name} 
                                                         onChange={e => updateFormParams({ ...formParams, name: e.target.value })} 
-                                                    />
-                                                </div>
+                            />
+                        </div>
                                                 <div className="mb-4">
                                                     <label className="block text-blue-400 text-sm font-medium mb-2">Description</label>
                                                     <textarea 
@@ -257,12 +306,12 @@ export default function SellItem() {
                                                             <span className="text-gray-400">ETH</span>
                                                         </div>
                                                     </div>
-                                                </div>
-                                                
+                        </div>
+                        
                                                 {message && (
                                                     <div className={`p-3 rounded-lg mb-4 text-sm ${message.includes("failed") || message.includes("Please fill") ? "bg-red-900 bg-opacity-50 text-red-300" : "bg-blue-900 bg-opacity-50 text-blue-300"}`}>
                                                         {message}
-                                                    </div>
+                        </div>
                                                 )}
                                                 
                                                 <button 
@@ -281,11 +330,11 @@ export default function SellItem() {
                                         </div>
                                     </div>
                                 </div>
-                            </div>
-                            
+                        </div>
+                        
                             <div className="mt-6 text-sm text-gray-400 text-center">
                                 <p>Listing an item will require ETH for gas fees and the marketplace listing fee</p>
-                            </div>
+                        </div>
                         </div>
                     )}
                 </div>

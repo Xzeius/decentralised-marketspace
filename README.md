@@ -1,6 +1,6 @@
 # AGUA Marketspace
 
-A decentralized NFT marketplace running on the Ethereum blockchain where users can buy and sell unique digital items.
+A decentralized marketplace running on the Ethereum blockchain where users can buy and sell unique digital items.
 
 ## Features
 
