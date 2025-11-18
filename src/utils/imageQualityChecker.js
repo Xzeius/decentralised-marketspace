@@ -6,7 +6,7 @@ async function loadModel() {
     if (cachedModel) return cachedModel;
     try {
         cachedModel = await tf.loadLayersModel(
-            "https://tfhub.dev/google/tfjs-model/imagenet/mobilenet_v2_100_224/classification/3/default/1"
+            "https://tfhub.dev/google/tfjs-model/imagenet/mobilenet_v2 _100_224/classification/3/default/1"
         );
         return cachedModel;
     } catch (error) {

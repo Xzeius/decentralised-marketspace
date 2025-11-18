@@ -18,6 +18,8 @@ export const resolveIPFSUrl = (url) => {
       parts.pop(); // remove the duplicate filename
     }
   
-    return `https://nftstorage.link/ipfs/${parts.join("/")}`;
+    // return `https://nftstorage.link/ipfs/${parts.join("/")}`;
+    return `https://ipfs.io/ipfs/${parts.join("/")}`;  
+
   };
   

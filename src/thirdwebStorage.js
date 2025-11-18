@@ -3,7 +3,7 @@
 import { ThirdwebStorage } from "@thirdweb-dev/storage";
 
 // Get the client ID from environment variables
-const clientId = process.env.REACT_APP_THIRDWEB_CLIENT_ID || "8c20c1055d7a8fcf888bad9d8b551767";
+const clientId = process.env.REACT_APP_THIRDWEB_CLIENT_ID;
 
 const storage = new ThirdwebStorage({ clientId });
 
