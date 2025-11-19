@@ -77,21 +77,25 @@ export default function ItemPage() {
             setError(null);
             setIsLoading(true);
 
-            if (!window.ethereum) {
-                setError("MetaMask is not installed. Please install it to view item details.");
-                setIsLoading(false);
-                return;
+            // Create provider - use MetaMask if available, otherwise use public RPC
+            let provider;
+            if (window.ethereum) {
+                // Use MetaMask/injected provider if available
+                provider = new ethers.providers.Web3Provider(window.ethereum, "any");
+                console.log("Using MetaMask provider");
+            } else {
+                // Fallback to Alchemy public RPC for read-only access (CORS-enabled)
+                provider = new ethers.providers.JsonRpcProvider("https://eth-sepolia.g.alchemy.com/v2/demo");
+                console.log("MetaMask not available, using Alchemy public RPC");
             }
 
-            // Use injected provider only (no external RPC → no CORS)
-            const provider = new ethers.providers.Web3Provider(window.ethereum, "any");
             const contract = new ethers.Contract(
                 MarketplaceJSON.address,
                 MarketplaceJSON.abi,
                 provider
             );
 
-            // Update wallet state (doesn't block reads)
+            // Update wallet state (doesn't block reads, just for UI state)
             await checkWalletConnection();
 
             console.log("Fetching item data for token ID:", tokenId);
@@ -407,13 +411,12 @@ export default function ItemPage() {
 
                                     {message && (
                                         <div
-                                            className={`p-4 rounded-lg mb-4 text-sm flex items-start ${
-                                                messageType === "error"
-                                                    ? "bg-red-900 bg-opacity-50 text-red-300"
-                                                    : messageType === "success"
+                                            className={`p-4 rounded-lg mb-4 text-sm flex items-start ${messageType === "error"
+                                                ? "bg-red-900 bg-opacity-50 text-red-300"
+                                                : messageType === "success"
                                                     ? "bg-green-900 bg-opacity-50 text-green-300"
                                                     : "bg-blue-900 bg-opacity-50 text-blue-300"
-                                            }`}
+                                                }`}
                                         >
                                             <svg
                                                 xmlns="http://www.w3.org/2000/svg"

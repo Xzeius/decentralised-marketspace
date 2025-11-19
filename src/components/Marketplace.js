@@ -50,14 +50,18 @@ export default function Marketplace() {
             setIsLoading(true);
             setError(null);
 
-            if (!window.ethereum) {
-                setError("MetaMask is not installed. Please install it to view the marketplace.");
-                updateFetched(true);
-                return;
+            // Create provider - use MetaMask if available, otherwise use public RPC
+            let provider;
+            if (window.ethereum) {
+                // Use MetaMask/injected provider if available
+                provider = new ethers.providers.Web3Provider(window.ethereum, "any");
+                console.log("Using MetaMask provider");
+            } else {
+                // Fallback to Alchemy public RPC for read-only access (CORS-enabled)
+                provider = new ethers.providers.JsonRpcProvider("https://eth-sepolia.g.alchemy.com/v2/demo");
+                console.log("MetaMask not available, using Alchemy public RPC");
             }
 
-            // Use MetaMask / injected provider only (no external RPC → no CORS)
-            const provider = new ethers.providers.Web3Provider(window.ethereum, "any");
             const contract = new ethers.Contract(
                 MarketplaceJSON.address,
                 MarketplaceJSON.abi,
@@ -132,13 +136,9 @@ export default function Marketplace() {
     // Listen for wallet connection changes & initial load
     useEffect(() => {
         const init = async () => {
-            if (!window.ethereum) {
-                setError("MetaMask is not installed. Please install it to use the marketplace.");
-                setIsLoading(false);
-                return;
-            }
-
+            // Check wallet connection (doesn't block if not available)
             await checkWalletConnection();
+            // Fetch NFTs (will use public RPC if MetaMask not available)
             await getAllNFTs();
         };
 
